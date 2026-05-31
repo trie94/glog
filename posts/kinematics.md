@@ -1,4 +1,4 @@
-#Kinematics
+#kinematics
 
 test test `code inline` test. hello this is my first blog post.
 ```

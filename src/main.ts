@@ -91,8 +91,8 @@ async function renderOverview() {
     contentEl.innerHTML = `
       <div class="overview-container">
         <div class="welcome-hero">
-          <h1 class="hero-title">Welcome to <span>glog</span></h1>
-          <p class="hero-desc">A premium journal exploring computer graphics, mathematics, and physics simulations.</p>
+          <h1 class="hero-title"><span>glog</span> dane</h1>
+          <p class="hero-desc">tensai can do</p>
         </div>
         <div class="post-grid">
           ${cardsHtml}
