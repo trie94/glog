@@ -4,10 +4,18 @@ import sidebarItemTemplate from '../sidebar-item.html?raw';
 export class Sidebar {
     private postsListEl: HTMLElement;
     private navHomeBtn: HTMLElement;
+    private sidebarEl: Element;
+    private readonly menuToggleBtn: HTMLElement;
 
-    constructor(postsListEl: HTMLElement, navHomeBtn: HTMLElement) {
+    constructor(
+        postsListEl: HTMLElement, navHomeBtn: HTMLElement,
+        sidebarEl: Element, menuToggleBtn: HTMLElement) {
         this.postsListEl = postsListEl;
         this.navHomeBtn = navHomeBtn;
+        this.sidebarEl = sidebarEl;
+        this.menuToggleBtn = menuToggleBtn;
+
+        this.initMobileListeners();
     }
 
     async render() {
@@ -50,4 +58,23 @@ export class Sidebar {
         }
     }
 
+    closeMobileMenu() {
+        this.sidebarEl.classList.remove('open');
+    }
+
+    private initMobileListeners() {
+        this.menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.sidebarEl.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (this.sidebarEl.classList.contains('open') &&
+                !this.sidebarEl.contains(target) &&
+                target !== this.menuToggleBtn) {
+                this.closeMobileMenu();
+            }
+        });
+    }
 }

@@ -1,27 +1,12 @@
 import { parseMarkdown, type ParsedPost } from './parser';
 
 export interface PostIndexEntry extends ParsedPost {
-  id: number;
-}
-
-// TODO: replace this with a better hash function.
-class IdGenerator {
-  getId(path: string): number {
-    const cleanPath = path.replace(/^\/posts\//, '').replace(/\.md$/, '').split('/').pop() || '';
-    let hash = 0;
-    for (let i = 0; i < cleanPath.length; i++) {
-      const char = cleanPath.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
-  }
+  id: string;
 }
 
 // Store the parsed posts cache and backlinks map
-const idGenerator = new IdGenerator();
-let postsCache: Record<number, PostIndexEntry> = {};
-let backlinksMap: Record<number, Array<{ id: number; title: string; excerpt: string }>> = {};
+let postsCache: Record<string, PostIndexEntry> = {};
+let backlinksMap: Record<string, Array<{ id: string; title: string; excerpt: string }>> = {};
 let isInitialized = false;
 
 /**
@@ -36,7 +21,8 @@ export async function initializePostsIndex() {
   const parsedEntries: PostIndexEntry[] = [];
 
   for (const [path, moduleContent] of Object.entries(postModules)) {
-    const id = idGenerator.getId(path);
+    // generate id from the file name.
+    const id = path.split('/').pop()?.replace('.md', '') || 'unknown';
     const rawContent = typeof moduleContent === 'string' ? moduleContent : (moduleContent?.default || '');
     
     const parsed = await parseMarkdown(rawContent);
@@ -62,13 +48,12 @@ export async function initializePostsIndex() {
   // Build the backlinks map
   for (const entry of parsedEntries) {
     for (const targetId of entry.links) {
-      const targetNumericId = idGenerator.getId(targetId);
       // If the target post exists in our cache, add this entry as a backlink
-      if (postsCache[targetNumericId]) {
+      if (postsCache[targetId]) {
         // Prevent duplicate backlinks
-        const alreadyExists = backlinksMap[targetNumericId].some(link => link.id === entry.id);
+        const alreadyExists = backlinksMap[targetId].some(link => link.id === entry.id);
         if (!alreadyExists) {
-          backlinksMap[targetNumericId].push({
+          backlinksMap[targetId].push({
             id: entry.id,
             title: entry.title,
             excerpt: entry.excerpt
@@ -84,10 +69,9 @@ export async function initializePostsIndex() {
 /**
  * Get a specific post by its ID
  */
-export async function getPostById(id: number | string): Promise<PostIndexEntry | null> {
+export async function getPostById(id: string): Promise<PostIndexEntry | null> {
   await initializePostsIndex();
-  const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-  return postsCache[numericId] || null;
+  return postsCache[id] || null;
 }
 
 /**
@@ -101,8 +85,7 @@ export async function getAllPosts(): Promise<PostIndexEntry[]> {
 /**
  * Get all incoming links (backlinks) for a given post ID
  */
-export async function getBacklinks(id: number | string) {
+export async function getBacklinks(id: string) {
   await initializePostsIndex();
-  const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-  return backlinksMap[numericId] || [];
+  return backlinksMap[id] || [];
 }
