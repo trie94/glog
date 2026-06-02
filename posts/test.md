@@ -1,4 +1,4 @@
-#test
+# test
 
 test test `code inline` test. hello this is my first blog post.
 ```
@@ -11,3 +11,10 @@ math block test:
 $$
 3x+4=12
 $$
+
+
+# topics to talk about
+- FK & IK
+- rigidbody
+- softbody
+- dynamics
