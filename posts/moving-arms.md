@@ -75,7 +75,47 @@ _note: later this can be used when we talk about perspective, where we don't pas
 with this, we can now combine translation and rotation into a single chain of matrix multiplication! this is pretty
 important, as calculating motion gets incredibly complicated once we start introducing object hierarchies...
 
+## coordinate spaces
+so far, we have discussed how to represent a transform for a single object in a 3D world. but we were a bit sloppy with
+our definition of 3D space. the math above works only if the object's local origin coincides with the world's origin.
+let's be more precise about the coordinate spaces here before we dive into the transform hierarchy.
+
+### local/model space
+let's bring back our example of a single box. this box has its own local space where $(0, 0, 0)$ is its center.
+if the box is a cube with a side length of 1 (i.e. width, height, and depth of 1), the top-left corner would be located
+at $(-0.5, 0.5, -0.5)$
+
+// TODO: add an image with left-handed coordinate
+
+_(note: we are using a left-handed coordinate system where the positive X-axis points to the right, the positive Y-axis
+points up, and the positive Z-axis points forward)_
+
+and the same thing applies to the rotation. when we rotate an object in local space, it rotates around its own center.
+
+### world space
+now let's say we want to place this box in the world space at $(1, 2, 3)$. meaning any point on the box, say $P$, should
+be shifted by $(1, 2, 3)$ in the world space. to build the model matrix (Model $\rightarrow$ World), it looks like this:
+$$M = \begin{bmatrix} | & | & | & | \\ X_{axis} & Y_{axis} & Z_{axis} & Position \\ | & | & | & | \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
+
+basically, you just define the basis of the local space in world coordinates. so if there was no rotation, it'd be
+$$M = \begin{bmatrix} 1 & 0 & 0 & 1 \\ 0 & 1 & 0 & 2 \\ 0 & 0 & 1 & 3 \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
+
+let's also think about rotation. if there is a rotation, say we rotate the cube by $90^\circ$ around the Y-axis
+(counter-clock wise) and then translate to $(1, 2, 3)$...
+- Y-axis: the basis doesn't change as we rotate the cube around its Y-axis. so the column stays at $(0, 1, 0)$
+- X-axis: the basis is now looking at the old Z-axis $(0, 0, 1)$
+- Z-axis: the basis is now looking at the old negative X-axis $(-1, 0, 0)$
+
+then we add translation $(1, 2, 3)$, which makes our model matrix:
+$$M = \begin{bmatrix} 0 & 0 & -1 & 1 \\ 0 & 1 & 0 & 2 \\ 1 & 0 & 0 & 3 \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
+
+### how do we go back to model space?
+the nice thing about matrices is that going between those spaces becomes easy as we can simply invert the matrix.
+- model matrix: model $\rightarrow$ world
+- inverse model matrix: world $\rightarrow$ model
+
 ## the skeleton: parent-child hierarchy
+and actually we can have more spaces between model and world...
 TBF now that we know how the motion of a single object can be represented in a matrix form...
 
 ## forward kinematics (FK)
