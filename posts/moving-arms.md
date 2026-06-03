@@ -1,7 +1,7 @@
 # motions
 
 ## Goal: Make a robot arm reach a target
-![image](/glog/roboarm.jpg)
+// TODO insert an image
 
 ## How to represent motion?
 to calculate how a robot arm moves, we first need a mathematical way to represent a single static object in 3D space.
