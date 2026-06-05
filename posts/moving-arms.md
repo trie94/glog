@@ -70,8 +70,8 @@ $$
 - top left 3x3: rotation & scale
 - right column: translation (and $W$ is locked to 1.)
 - bottom row: make the math work lol. it's keeping $W=1$:
-$$W_{final} = (0 \cdot x) + (0 \cdot y) + (0 \cdot z) + (1 \cdot 1) = 1$$
-_note: later this can be used when we talk about perspective, where we don't pass in $(0, 0, 0, 1)$, we are not going to cover it for now._
+  $$W_{final} = (0 \cdot x) + (0 \cdot y) + (0 \cdot z) + (1 \cdot 1) = 1$$
+  _note: later this can be used when we talk about perspective, where we don't pass in $(0, 0, 0, 1)$, we are not going to cover it for now._
 
 with this, we can now combine translation and rotation into a single chain of matrix multiplication! this is pretty
 important, as calculating motion gets incredibly complicated once we start introducing object hierarchies...
@@ -93,22 +93,31 @@ points up, and the positive Z-axis points forward)_
 
 and the same thing applies to the rotation. when we rotate an object in local space, it rotates around its own center.
 
-### world space
-now let's say we want to place this box in the world space at $(1, 2, 3)$. meaning any point on the box, say $P$, should
-be shifted by $(1, 2, 3)$ in the world space. to build the model matrix (Model $\rightarrow$ World), it looks like this:
+### world space (parent space)
+now let's say we want to place this box in the world space at some location with some rotation and scale. how do we do
+this? we only know the box's local space, which doesn't change regardless of where the box is located in the world
+space. here, we should think "how do i convert my local coordinates into my parent's coordinate system?"
+(in this example, the box doesn't have any parent, so it's the world space that we care about.)
+
+this is where model matrix (Model $\rightarrow$ World) comes in, which converts the local coordinates into its parent's
+coordinate system. the way you construct the model matrix is you define the new basis of the box in the world space
+(with scale applied), and append a translation at the last column:
 $$M = \begin{bmatrix} | & | & | & | \\ X_{axis} & Y_{axis} & Z_{axis} & Position \\ | & | & | & | \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
 
-basically, you just define the basis of the local space in world coordinates. so if there was no rotation, it'd be
+say we want to place the box in the world space at $(1, 2, 3)$:
 $$M = \begin{bmatrix} 1 & 0 & 0 & 1 \\ 0 & 1 & 0 & 2 \\ 0 & 0 & 1 & 3 \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
 
-let's also think about rotation. if there is a rotation, say we rotate the cube by $90^\circ$ around the Y-axis
+say we rotate the box by $90^\circ$ around the Y-axis and then translate to $(1, 2, 3)$, then:
 (counter-clock wise) and then translate to $(1, 2, 3)$...
-- Y-axis: the basis doesn't change as we rotate the cube around its Y-axis. so the column stays at $(0, 1, 0)$
 - X-axis: the basis is now looking at the old Z-axis $(0, 0, 1)$
+- Y-axis: the basis doesn't change as we rotate the cube around its Y-axis. so the column stays at $(0, 1, 0)$
 - Z-axis: the basis is now looking at the old negative X-axis $(-1, 0, 0)$
 
-then we add translation $(1, 2, 3)$, which makes our model matrix:
+combined, we get:
 $$M = \begin{bmatrix} 0 & 0 & -1 & 1 \\ 0 & 1 & 0 & 2 \\ 1 & 0 & 0 & 3 \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
+
+_(note: for scaling, you can just modify the basis vectors with a scalar. we are omitting this as we don't need it for
+this particular robot arm simulation.)_
 
 ### how do we go back to model space?
 the nice thing about matrices is that going between those spaces becomes easy as we can simply invert the matrix.
@@ -116,8 +125,61 @@ the nice thing about matrices is that going between those spaces becomes easy as
 - inverse model matrix: world $\rightarrow$ model
 
 ## the skeleton: parent-child hierarchy
-and actually we can have more spaces between model and world...
-TBF now that we know how the motion of a single object can be represented in a matrix form...
+the reason we spent so much time defining coordinate spaces is because motion is relative.
+
+if you look at the robot arm image, you will see it has three segments connected by joints. we will call each of them
+from bottom to top: joint A (the base), B (the elbow), and C (the wrist).
+
+and as you can see, when A rotates, B and C rotate with it. when B moves, C's transform is affected as well. this
+cascading effect is why we need to understand relative transforms and spaces (local and world spaces).
+
+// TODO: insert animations to illustrate the point.
+### example motion: local matrices
+we will build a specific transform as an example. let's assume every metal segment of our robot arm is exactly 5 units
+long.
+
+#### joint A (the base)
+because joint A is rooted to the floor, its "parent" is the world.
+- rotation: $90^\circ$ around its Y-axis.
+- translation: $(0, 0, 0)$. it sits at the world origin.
+- $M_{A}$: rotates $90^\circ$ and stays at the world center.
+
+#### joint B (the elbow)
+joint B only cares about joint A (as its transform is affected by joint A). it does not know where it is in the world.
+to stay glued to the end of segment A, it just needs a local offset equal to the segment's length (which is 5).
+- rotation: $30^\circ$ around its Z-axis.
+- translation: $(0, 5, 0)$. it sits exactly 5 units above joint A's center.
+- $M_{B}$: rotates $30^\circ$ and translates 5 units up in joint A's space.
+
+#### joint C (the wrist)
+similarly, joint C only cares about joint B.
+- rotation: $75^\circ$ around its X-axis.
+- translation: $(0, 5, 0)$. it sits exactly 5 units above joint B's center.
+- $M_{C}$: rotates $75^\circ$ and translates 5 units up in joint B's space.
+
+### calculating the global transform
+here we can ask questions like:
+- where is a point $P_c$ on the wrist located in world space?
+- where is that same point $P_c$ located in joint A's space?
+- where is a point $P_b$ on the elbow located in world space?
+- and many other questions...
+
+let's answer the first question! to get the answer, we need to trace the path upwards:
+joint C's space $\rightarrow$ joint B's space $\rightarrow$ joint A's space $\rightarrow$ world space.
+
+let's do it step by step. let's first bring the point $P_c$ that's in joint C's local space into joint B's space:
+$$P_B = M_C \cdot P_c$$
+
+then into joint A's space...
+$$P_A = M_B \cdot M_C \cdot P_c$$
+
+and finally into world space...
+$$P_{world} = M_A \cdot M_B \cdot M_C \cdot P_c$$
+
+which means our global matrix for joint C is simply:
+$$M_{global\_C} = M_A \cdot M_B \cdot M_C$$
+
+this way, a point in any local space can be projected all the way up the chain to find its true position in the world.
 
 ## forward kinematics (FK)
 TBF more intuitive way to represent a motion, where we apply transforms top-down (from parent to child)

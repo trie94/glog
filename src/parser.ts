@@ -55,7 +55,9 @@ export async function parseMarkdown(markdown: string): Promise<ParsedPost> {
 
   // 3. Extract and render Display Math ($$ math $$)
   processedMarkdown = processedMarkdown.replace(/\$\$([\s\S]*?)\$\$/g, (_, mathText) => {
-    const key = `MathBlock${placeholderCounter}`;
+    // Add a random suffix to ensure uniqueness
+    const suffix = Math.random().toString(36).substring(7);
+    const key = `MathBlock${placeholderCounter}_${suffix}`;
     try {
       const rendered = katex.renderToString(mathText.trim(), {
         displayMode: true,
@@ -73,7 +75,8 @@ export async function parseMarkdown(markdown: string): Promise<ParsedPost> {
   // 4. Extract and render Inline Math ($ math $)
   // Negative lookahead/lookbehind or strict character bounds to avoid false matches with normal $ symbols
   processedMarkdown = processedMarkdown.replace(/(?<!\$)\$([^\$\n]+?)\$(?!\$)/g, (_, mathText) => {
-    const key = `MathInline${placeholderCounter}`;
+    const suffix = Math.random().toString(36).substring(7);
+    const key = `MathInline${placeholderCounter}_${suffix}`;
     try {
       const rendered = katex.renderToString(mathText.trim(), {
         displayMode: false,
