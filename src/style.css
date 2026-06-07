@@ -189,8 +189,10 @@ a:hover {
 }
 
 .nav-icon {
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
+  display: block;
 }
 
 /* Post list item specifics */

@@ -1,4 +1,5 @@
 import { parseMarkdown, type ParsedPost } from './parser';
+import manifest from './../posts-manifest.json';
 
 export interface PostIndexEntry extends ParsedPost {
   id: string;
@@ -33,9 +34,16 @@ export async function initializePostsIndex() {
     });
   }
 
+  // filter and order based on the manifest
+  const orderedPost =
+      manifest.posts
+          .filter(m => m.visible)
+          .map(m => parsedEntries.find(p => p.id == m.id))
+          .filter((p): p is PostIndexEntry => !!p);
+
   // Populate cache
   postsCache = {};
-  for (const entry of parsedEntries) {
+  for (const entry of orderedPost) {
     postsCache[entry.id] = entry;
   }
 

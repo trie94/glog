@@ -1,6 +1,5 @@
-# motions
+# how to make a robot arm reach a target
 
-## Goal: Make a robot arm reach a target
 ![image](/glog/roboarm.jpg)
 // TODO insert a better image
 
@@ -46,7 +45,7 @@ the reason why we can't represent translation in a 3x3 matrix is because it's no
 properties of a linear transform is that the origin cannot change. but translation, by definition, moves the origin.
 
 another way to prove why a 3x3 matrix multiplication can't represent translation is to look at the following
-multiplication. multiplying any 3x3 matrix with a origin (zero vector) always gives you $(0, 0, 0)$:
+multiplication. multiplying any 3x3 matrix with an origin (zero vector) always gives you $(0, 0, 0)$:
 $$
 \begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix} \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} =
 \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}
@@ -98,7 +97,7 @@ now let's say we want to place this box in the world space at some location with
 this? we only know the box's local space, which doesn't change regardless of where the box is located in the world
 space. here, we should think "how do i convert my local coordinates into the worlds coordinate system?"
 
-this is where model matrix (Model $\rightarrow$ World) comes in, which converts the local coordinates into the world
+this is where the model matrix (Model $\rightarrow$ World) comes in, which converts the local coordinates into the world
 coordinate system. the way you construct the model matrix is you define the new basis of the box in the world space
 (with scale applied), and append a translation at the last column:
 $$M = \begin{bmatrix} | & | & | & | \\ X_{axis} & Y_{axis} & Z_{axis} & Position \\ | & | & | & | \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
@@ -120,15 +119,16 @@ this particular robot arm simulation.)_
 
 ### how do we go back to model space?
 the nice thing about matrices is that going between those spaces becomes easy as we can invert the matrix.
-(// TODO: explain how to inverse matrix and when we can't inverse it: singular matrix)
 - model matrix: model $\rightarrow$ world
 - inverse model matrix: world $\rightarrow$ model
+
+_note: we can't always invert matrices. we won't cover that case in this post!_
 
 ## the skeleton: parent-child hierarchy
 the reason we spent so much time defining coordinate spaces is because motion is relative.
 
 if you look at the robot arm image, you will see it has three segments connected by joints. we will call each of them
-from bottom to top: joint A (the base), B (the elbow), and C (the wrist).
+from bottom to top: joint A (the base), B (the elbow), and C (the wrist, aka end effector).
 
 and as you can see, when A rotates, B and C rotate with it. when B moves, C's transform is affected as well. this
 cascading effect is why we need to understand relative transforms and spaces (local and world spaces).
@@ -151,7 +151,7 @@ to stay glued to the end of segment A, it just needs a local offset equal to the
 - translation: $(0, 5, 0)$. it sits exactly 5 units above joint A's center.
 - $M_{B}$: rotates $30^\circ$ and translates 5 units up in joint A's space.
 
-#### joint C (the wrist)
+#### joint C (the end effector)
 similarly, joint C only cares about joint B.
 - rotation: $75^\circ$ around its X-axis.
 - translation: $(0, 5, 0)$. it sits exactly 5 units above joint B's center.
@@ -159,7 +159,7 @@ similarly, joint C only cares about joint B.
 
 ### calculating the model matrix
 here we can ask questions like:
-- where is a point $P_c$ on the wrist located in world space?
+- where is a point $P_c$ on the end effector located in world space?
 - where is that same point $P_c$ located in joint A's space?
 - where is a point $P_b$ on the elbow located in world space?
 - and many other questions...
@@ -185,16 +185,80 @@ this way, a point in any local space can be projected all the way up the chain t
 what we just did in the section above is called forward kinematics. in FK, we apply transforms down the chain, from
 parent to child.
 - inputs: local transforms of joint A, B, and C.
-- output: the final world transform of joint C (the wrist)
+- output: the final world transform of joint C (the end effector)
 
 ## inverse kinematics (IK)
 inverse kinematics is the opposite of forward kinematics. instead of computing the transform from parent to child, we
-set a "target transform" where a joint should end up. for example, in our case, we want to have joint C to end up at
-the position where the target box is located.
+set a "target transform" where a joint should end up. for example, in our case, we want to joint C to end up at the
+position where the target box is located.
 
 IK is more complex than FK because it can have multiple valid solutions or no solutions at all! oftentimes, people set\
 different heuristics to find the most effective solution: energy efficiency, movement efficiency (minimizing
 how much the joints need to move to reach the target), etc.
 
 ## IK solver
-TBF
+to recap, our goal is to solve "what transform should we apply to make the robot arm touch the target?"; for this, we
+need an IK solver which iteratively guesses and adjusts our transforms until the arm reaches the target.
+
+there are many IK solvers, but here we will briefly introduce three popular iterative IK solvers and dive into their
+implementations in separate posts:
+
+### CCD (cyclic coordinate descent)
+for each joint, CCD draws:
+- a line from the joint to the end effector
+- a line from the joint to the target
+
+it then rotates the joint to make these two lines align, and moves up the chain (so now we are at joint A).
+
+#### step 1: joint B
+- draws a line from joint B to the end effector and a line from joint B to the target
+- rotates joint B to make those two lines aligned
+
+#### step 2: joint A (the base)
+- moving up the chain, draws a line from joint A to the end effector and a line from joint A to the target
+- again, rotates joint A to make those two lines aligned.
+
+the solver keeps repeating those two steps (in our case joint B, joint A, joint B, joint A...).
+
+### FABRIK (forward and backward reaching inverse kinematics)
+this approach cares about one rule: the lengths of the segments between the joints never change. the way this works is
+to ping-pong between backward and forward reaches.
+
+#### backward pass (from the target to the base)
+- move the end effector (joint C) directly to the target
+- pull the next joint (joint B) along a line until it's exactly 5 units away from the new joint C position
+- pull the base (joint A) until it's exactly 5 units away from the new joint B position
+
+#### forward pass (from the base to the target)
+- push the base (joint A) back to its original position
+- push joint B back so that it is exactly 5 units away from the base
+- push the end effector back so it maintains a length of 5 units from joint B
+
+and the solver keeps repeating those two passes (until it hits the max iteration or touches the target).
+
+### jacobian solver (differential kinematics)
+this approach starts by asking: "if i rotate each joint by a tiny amount, how much will the end effector move in the X,
+Y, and Z directions?"
+
+it packs all of these derivatives into a massive grid called a jacobian matrix.
+
+since our goal is to find how each joint should be rotated to have the end effector located at the target (or as close
+as possible), we actually need to ask an inverse question: "if i want to move my end effector towards the target, how
+much rotation do i need to apply to each of the joints?" - the way we do it is to invert the matrix.
+
+the solver applies the rotation, then recomputes the jacobian matrix, and keeps iterating until it reaches the target
+(or hits the max iteration)
+
+#### jacobian matrix
+in our simple example, as the base is grounded and only the rotations of the joints matter, we explicitly mentioned
+rotation in the section above.
+
+however, jacobian matrix is not limited to rotation, we can pack derivatives for any type of movement, because all it
+actually cares about is degrees of freedom. depending on the number of DoF, the jacobian matrix simply grows.
+
+### what's next?
+now that we covered the foundation needed to implement IK, let's dive into the code implementations:
+
+- [implementing CCD](#post/ccd-solver)
+- [implementing FABRIK](#post/fabrik-solver)
+- [implementing the jacobian solver](#post/jacobian-solver)
