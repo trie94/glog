@@ -54,7 +54,7 @@ $$
 
 ### the 4th dimension (homogeneous coordinates)
 to unstick the origin, we can use a trick where we upgrade to a higher dimension (4D) and treat our 3D space as a
-slice hovering at $W = 1$. a sheer in the higher dimension then becomes a translation in our 3D slice.
+slice hovering at $W = 1$. a shear in the higher dimension then becomes a translation in our 3D slice.
 
 since it's hard to visualize a 3D slice in a 4D space, let's drop it down to 2D and 3D spaces instead. imagine we have
 a piece of paper (2D space), and we want to translate a point $P$ in 2D. here, we augment the space into 3D, treating
@@ -93,13 +93,12 @@ points up, and the positive Z-axis points forward)_
 
 and the same thing applies to the rotation. when we rotate an object in local space, it rotates around its own center.
 
-### world space (parent space)
+### world space
 now let's say we want to place this box in the world space at some location with some rotation and scale. how do we do
 this? we only know the box's local space, which doesn't change regardless of where the box is located in the world
-space. here, we should think "how do i convert my local coordinates into my parent's coordinate system?"
-(in this example, the box doesn't have any parent, so it's the world space that we care about.)
+space. here, we should think "how do i convert my local coordinates into the worlds coordinate system?"
 
-this is where model matrix (Model $\rightarrow$ World) comes in, which converts the local coordinates into its parent's
+this is where model matrix (Model $\rightarrow$ World) comes in, which converts the local coordinates into the world
 coordinate system. the way you construct the model matrix is you define the new basis of the box in the world space
 (with scale applied), and append a translation at the last column:
 $$M = \begin{bmatrix} | & | & | & | \\ X_{axis} & Y_{axis} & Z_{axis} & Position \\ | & | & | & | \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
@@ -120,7 +119,8 @@ _(note: for scaling, you can just modify the basis vectors with a scalar. we are
 this particular robot arm simulation.)_
 
 ### how do we go back to model space?
-the nice thing about matrices is that going between those spaces becomes easy as we can simply invert the matrix.
+the nice thing about matrices is that going between those spaces becomes easy as we can invert the matrix.
+(// TODO: explain how to inverse matrix and when we can't inverse it: singular matrix)
 - model matrix: model $\rightarrow$ world
 - inverse model matrix: world $\rightarrow$ model
 
@@ -157,7 +157,7 @@ similarly, joint C only cares about joint B.
 - translation: $(0, 5, 0)$. it sits exactly 5 units above joint B's center.
 - $M_{C}$: rotates $75^\circ$ and translates 5 units up in joint B's space.
 
-### calculating the global transform
+### calculating the model matrix
 here we can ask questions like:
 - where is a point $P_c$ on the wrist located in world space?
 - where is that same point $P_c$ located in joint A's space?
@@ -176,17 +176,25 @@ $$P_A = M_B \cdot M_C \cdot P_c$$
 and finally into world space...
 $$P_{world} = M_A \cdot M_B \cdot M_C \cdot P_c$$
 
-which means our global matrix for joint C is simply:
-$$M_{global\_C} = M_A \cdot M_B \cdot M_C$$
+which means our model matrix for joint C is simply:
+$$M_{model\_C} = M_A \cdot M_B \cdot M_C$$
 
 this way, a point in any local space can be projected all the way up the chain to find its true position in the world.
 
 ## forward kinematics (FK)
-TBF more intuitive way to represent a motion, where we apply transforms top-down (from parent to child)
+what we just did in the section above is called forward kinematics. in FK, we apply transforms down the chain, from
+parent to child.
+- inputs: local transforms of joint A, B, and C.
+- output: the final world transform of joint C (the wrist)
 
 ## inverse kinematics (IK)
-TBF reverse way, compute a matrix to reach a target. compared to fk, ik has many solutions.
-explain jacobian here
+inverse kinematics is the opposite of forward kinematics. instead of computing the transform from parent to child, we
+set a "target transform" where a joint should end up. for example, in our case, we want to have joint C to end up at
+the position where the target box is located.
+
+IK is more complex than FK because it can have multiple valid solutions or no solutions at all! oftentimes, people set\
+different heuristics to find the most effective solution: energy efficiency, movement efficiency (minimizing
+how much the joints need to move to reach the target), etc.
 
 ## IK solver
 TBF
