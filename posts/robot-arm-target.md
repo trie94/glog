@@ -182,17 +182,17 @@ $$M_{model\_C} = M_A \cdot M_B \cdot M_C$$
 this way, a point in any local space can be projected all the way up the chain to find its true position in the world.
 
 ## forward kinematics (FK)
-what we just did in the section above is called forward kinematics. in FK, we apply transforms down the chain, from
+what we just did in the section above is called forward kinematics (FK). in FK, we apply transforms down the chain, from
 parent to child.
 - inputs: local transforms of joint A, B, and C.
 - output: the final world transform of joint C (the end effector)
 
 ## inverse kinematics (IK)
 inverse kinematics is the opposite of forward kinematics. instead of computing the transform from parent to child, we
-set a "target transform" where a joint should end up. for example, in our case, we want to joint C to end up at the
+set a "target transform" where a joint should end up. for example, in our case, we want joint C to end up at the
 position where the target box is located.
 
-IK is more complex than FK because it can have multiple valid solutions or no solutions at all! oftentimes, people set\
+IK is more complex than FK because it can have multiple valid solutions or no solutions at all! oftentimes, people set
 different heuristics to find the most effective solution: energy efficiency, movement efficiency (minimizing
 how much the joints need to move to reach the target), etc.
 
