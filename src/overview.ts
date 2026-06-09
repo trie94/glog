@@ -1,5 +1,4 @@
 import { getAllPosts } from "./backlinks.ts";
-// 1. Import the templates as raw strings
 import overviewTemplate from '../htmls/overview.html?raw';
 import cardTemplate from '../htmls/card.html?raw';
 

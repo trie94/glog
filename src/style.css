@@ -650,6 +650,11 @@ a:hover {
   .content-container {
     padding: 40px 20px;
   }
+
+  .main-layout {
+    max-width: 100vw;
+    overflow-x: hidden; /* Snaps everything back and hides accidental side-scrolling */
+  }
 }
 
 /* three js visualizer containers */
@@ -659,7 +664,7 @@ a:hover {
   aspect-ratio: 16 / 9;
   max-height: 500px;
   height: auto;
-  /*margin: 32px 0;*/
+  margin: 32px 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   /*border: 2px solid var(--border);*/
@@ -671,7 +676,7 @@ a:hover {
 }
 
 /* Mobile optimizations */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .visualizer-container {
     margin: 24px 0;
     aspect-ratio: 4 / 3;

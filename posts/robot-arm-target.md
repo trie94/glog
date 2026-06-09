@@ -2,6 +2,9 @@
 
 <div id="visualizer-container-1" class="visualizer-container"></div>
 
+we have a robot arm grounded in 3D space, and we want its hand (the end effector) to reach a target. if each joint can
+rotate freely on its X, Y, and Z axes, how do we calculate that motion?
+
 ## How to represent motion?
 to calculate how a robot arm moves, we first need a mathematical way to represent a single static object in 3D space.
 _(note that we assume 3D space in cartesian coordinates unless explicitly mentioned.)_

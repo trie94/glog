@@ -134,16 +134,21 @@ export async function parseMarkdown(markdown: string): Promise<ParsedPost> {
 
   let excerpt = 'No description available.';
   if (markdownLines.length > 1) {
-    const rawExcerpt = markdownLines[1]
-      .replace(/^#+\s*/, '') // strip leading heading hashes if any
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // clean markdown links to just their text
-      .replace(/[*_`]/g, ''); // strip basic markdown bold/italic/code markers
-    
-    const threshold = 160;
-    if (rawExcerpt.length > threshold) {
-      excerpt = rawExcerpt.substring(0, threshold) + '...';
-    } else {
-      excerpt = rawExcerpt;
+    // Find the first line after the title that actually contains text after stripping HTML/Headings
+    const targetLine = markdownLines.slice(1).find(line => {
+      return line.replace(/^#+\s*/, '').replace(/<[^>]*>/g, '').trim().length > 0;
+    });
+
+    if (targetLine) {
+      const rawExcerpt = targetLine
+          .replace(/^#+\s*/, '')
+          .replace(/<[^>]*>/g, '') // safely remove tags if text and HTML share a line
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/[*_`]/g, '')
+          .trim();
+
+      const threshold = 160;
+      excerpt = rawExcerpt.substring(0, threshold).trim() + '...';
     }
   }
 
