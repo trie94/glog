@@ -1,10 +1,18 @@
 import {getBacklinks, getPostById} from "./backlinks.ts";
+import errorTemplate from '../htmls/post-error.html?raw';
+import backlinkTemplate from '../htmls/backlink-card.html?raw';
+import postTemplate from '../htmls/post.html?raw';
 
+// generic class for posts...
 export class Post {
-    private contentEl: HTMLElement;
+    protected contentEl: HTMLElement;
 
     constructor(contentEl: HTMLElement) {
         this.contentEl = contentEl;
+    }
+
+    protected onPostRendered() {
+        // child classes should override this.
     }
 
     async render(postId: string) {
@@ -13,50 +21,35 @@ export class Post {
         try {
             const post = await getPostById(postId);
             if (!post) {
-                this.contentEl.innerHTML = `
-        <div class="markdown-body">
-          <h1>404 Post Not Found</h1>
-          <p>The post "<code>${postId}</code>" could not be found. Return to <a href="#">Overview</a>.</p>
-        </div>
-      `;
+                this.contentEl.innerHTML = errorTemplate.replace('${postId}', postId.toString());
                 return;
             }
 
-            // Get backlinks
             const backlinks = await getBacklinks(postId);
             const backlinksCount = backlinks.length;
 
             let backlinksHtml = '';
             if (backlinksCount > 0) {
-                const cards = backlinks.map(bl => `
-        <div class="backlink-card" onclick="window.location.hash = '#post/${bl.id}'" style="cursor: pointer;">
-          <div class="backlink-card-title">${bl.title}</div>
-          <div class="backlink-card-excerpt">${bl.excerpt}</div>
-        </div>
-      `).join('');
-
+                // Map backlink records to the individual card layout string
                 backlinksHtml = `
-        <div class="backlinks-grid">
-          ${cards}
-        </div>
-      `;
+                <div class="backlinks-grid">
+                  ${backlinks.map(bl => {
+                    return backlinkTemplate
+                        .replace('${bl.id}', bl.id.toString())
+                        .replace('${bl.title}', bl.title)
+                        .replace('${bl.excerpt}', bl.excerpt);
+                }).join('')}
+                </div>`;
             } else {
                 backlinksHtml = '<p class="no-backlinks">No references found linking to this concept yet.</p>';
             }
 
-            this.contentEl.innerHTML = `
-      <article class="markdown-body">
-        ${post.content}
-      </article>
-      
-      <section class="backlinks-container">
-        <h3 class="backlinks-title">
-          <span>Backlinks</span>
-          <span class="backlinks-count">${backlinksCount}</span>
-        </h3>
-        ${backlinksHtml}
-      </section>
-    `;
+            this.contentEl.innerHTML = postTemplate
+                .replace('${post.content}', post.content)
+                .replace('${backlinksCount}', backlinksCount.toString())
+                .replace('${backlinksHtml}', backlinksHtml);
+
+            this.onPostRendered();
 
             // Scroll to top of content
             window.scrollTo({ top: 0, behavior: 'smooth' });

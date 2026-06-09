@@ -1,5 +1,5 @@
 import {getAllPosts} from "./backlinks.ts";
-import sidebarItemTemplate from '../sidebar-item.html?raw';
+import sidebarItemTemplate from '../htmls/sidebar-item.html?raw';
 
 export class Sidebar {
     private postsListEl: HTMLElement;

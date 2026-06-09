@@ -1,8 +1,8 @@
 import './style.css';
 import {Overview} from "./overview.ts";
-import {Post} from "./post.ts";
 import {Sidebar} from "./sidebar.ts";
 import {Theme} from "./theme.ts";
+import { createPostInstance } from "./post-factory.ts";
 
 const postsListEl = document.getElementById('posts-list')!;
 const contentEl = document.getElementById('content')!;
@@ -13,7 +13,6 @@ const navHomeBtn = document.getElementById('nav-home')!;
 
 new Theme(themeToggleBtn);
 const overview = new Overview(contentEl);
-const post = new Post(contentEl);
 const sidebar = new Sidebar(postsListEl, navHomeBtn, sidebarEl, menuToggleBtn);
 
 async function router() {
@@ -23,7 +22,8 @@ async function router() {
   
   if (hash.startsWith('#post/')) {
     const postId = hash.replace('#post/', '');
-    await post.render(postId);
+    const postInstance = createPostInstance(postId, contentEl);
+    await postInstance.render(postId);
     sidebar.updateActiveSidebarLink(postId);
   } else {
     await overview.render();
@@ -32,13 +32,8 @@ async function router() {
 }
 
 async function init() {
-  // Wait for sidebar list rendering which triggers loading the index
   await sidebar.render();
-  
-  // Setup router listeners
   window.addEventListener('hashchange', router);
-  
-  // Run initial route
   await router();
 }
 

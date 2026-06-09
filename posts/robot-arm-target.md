@@ -1,7 +1,6 @@
 # how to make a robot arm reach a target
 
-![image](/glog/roboarm.jpg)
-// TODO insert a better image
+<div id="visualizer-container-1" class="visualizer-container"></div>
 
 ## How to represent motion?
 to calculate how a robot arm moves, we first need a mathematical way to represent a single static object in 3D space.

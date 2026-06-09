@@ -213,7 +213,6 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: 100vw;
 }
 
 /* Header */
@@ -650,5 +649,31 @@ a:hover {
   
   .content-container {
     padding: 40px 20px;
+  }
+}
+
+/* three js visualizer containers */
+.visualizer-container {
+  /* relative to its parent */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 500px;
+  height: auto;
+  /*margin: 32px 0;*/
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  /*border: 2px solid var(--border);*/
+  /*background-color: #1a1a1a;*/
+  /* TODO: change this? keep the same theme as code background for now */
+  background-color: var(--bg-code);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .visualizer-container {
+    margin: 24px 0;
+    aspect-ratio: 4 / 3;
   }
 }
