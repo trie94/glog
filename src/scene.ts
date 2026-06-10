@@ -16,7 +16,6 @@ export default class Scene {
     private height: number = 1;
     // @ts-ignore
     private controls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-    private meshes: THREE.Mesh[] = [];
     private readonly container: HTMLElement;
     private resizeObserver = new ResizeObserver(() => {
         const width = this.container.clientWidth;
@@ -27,6 +26,10 @@ export default class Scene {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
     });
+
+    private baseJoint: THREE.Mesh;
+    private midJoint: THREE.Mesh;
+    private wristJoint: THREE.Mesh;
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -50,18 +53,53 @@ export default class Scene {
         container.addEventListener("click", this.onMouseClick);
     }
 
+    // TODO think about encapsulation?
     start() {
         console.log("start");
         this.directionalLight.position.set( 2, 5, 2 );
 
-        // test geometry
-        const geo = new THREE.BoxGeometry(1, 1, 1);
-        const mat = new THREE.MeshStandardMaterial({ color: 0xfcba03 });
-        const mesh = new THREE.Mesh(geo, mat);
+        const LEN = 1;
+        const SIDE = 0.5;
 
-        this.meshes.push(mesh);
+        const boneGeo = new THREE.BoxGeometry(SIDE, LEN, SIDE);
+        const boneMat = new THREE.MeshStandardMaterial({ color: 0xfcba03 });
+        const baseBone = new THREE.Mesh(boneGeo, boneMat);
+        const midBone = new THREE.Mesh(boneGeo, boneMat);
 
-        this.scene.add(mesh);
+        const endEffectorGeo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
+        const endEffector = new THREE.Mesh(endEffectorGeo, boneMat);
+
+        const jointGeo = new THREE.SphereGeometry(SIDE * 0.5);
+        const jointMat = new THREE.MeshStandardMaterial({ color: 0x8132a8 });
+
+        const baseJoint = new THREE.Mesh(jointGeo, jointMat);
+        const midJoint = new THREE.Mesh(jointGeo, jointMat);
+        const wristJoint = new THREE.Mesh(jointGeo, jointMat);
+
+        // we are building the skeleton chain:
+        // baseJoint -> baseBone -> midJoint -> midBone -> wristJoint -> endEffector
+        baseJoint.add(baseBone);
+        baseBone.add(midJoint);
+        midJoint.add(midBone);
+        midBone.add(wristJoint);
+        wristJoint.add(endEffector);
+
+        // then place them at (0, 0.5, 0) in their parents local space
+        baseBone.position.set(0, LEN / 2, 0);
+        midJoint.position.set(0, LEN / 2, 0);
+        midBone.position.set(0, LEN / 2, 0);
+        wristJoint.position.set(0, LEN / 2, 0);
+        endEffector.position.set(0, SIDE / 2, 0);
+
+        this.scene.add(baseJoint);
+
+        baseJoint.position.set(0., -1, 0);
+
+        this.baseJoint = baseJoint;
+        this.midJoint = midJoint;
+        this.wristJoint = wristJoint;
+
+        console.log(this.baseJoint);
     }
 
     private update() {
@@ -70,11 +108,10 @@ export default class Scene {
             return;
         }
         this.timer.update();
-        const delta = this.timer.getDelta();
-        this.meshes.forEach(m => {
-            m.rotation.x += delta;
-            m.rotation.y += delta;
-        });
+
+        this.baseJoint.rotation.z += Math.cos(this.timer.getElapsed()) * 0.005;
+        this.midJoint.rotation.x += Math.cos(this.timer.getElapsed() * 0.1) * 0.001;
+        this.wristJoint.rotation.z += Math.cos(this.timer.getElapsed() * 1.2) * 0.005;
 
         this.renderer.render(this.scene, this.camera);
     }
