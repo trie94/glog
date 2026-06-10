@@ -11,7 +11,6 @@ export default class Scene {
     private camera: THREE.PerspectiveCamera = this.createCamera();
     private renderer: WebGPURenderer = new WebGPURenderer({
         antialias: true,
-        stencil: true,
     });
     private width: number = 1;
     private height: number = 1;
@@ -38,18 +37,18 @@ export default class Scene {
         this.resizeObserver.observe(this.container);
 
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true
-        this.renderer.toneMapping = THREE.NeutralToneMapping;
+        this.renderer.setSize(this.width, this.height);
+        // this.renderer.shadowMap.enabled = true
+        // this.renderer.toneMapping = THREE.NeutralToneMapping;
         this.scene.add(this.directionalLight);
 
         this.renderer.init().then(renderer => {
             this.start();
             renderer.setAnimationLoop(() => this.update());
         });
+
+        container.addEventListener("click", this.onMouseClick);
     }
-
-
 
     start() {
         console.log("start");
