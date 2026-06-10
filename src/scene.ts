@@ -27,9 +27,9 @@ export default class Scene {
         this.renderer.setSize(width, height);
     });
 
-    private baseJoint: THREE.Mesh;
-    private midJoint: THREE.Mesh;
-    private wristJoint: THREE.Mesh;
+    private baseJoint: THREE.Mesh = new THREE.Mesh();
+    private midJoint: THREE.Mesh = new THREE.Mesh();
+    private wristJoint: THREE.Mesh = new THREE.Mesh();
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -98,8 +98,6 @@ export default class Scene {
         this.baseJoint = baseJoint;
         this.midJoint = midJoint;
         this.wristJoint = wristJoint;
-
-        console.log(this.baseJoint);
     }
 
     private update() {
