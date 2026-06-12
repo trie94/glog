@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {WebGPURenderer} from "three/webgpu";
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import { DragControls } from 'three/addons/controls/DragControls.js';
 
 // TODO: make this class either generic or specific
 export default class Scene {
@@ -14,8 +15,7 @@ export default class Scene {
     });
     private width: number = 1;
     private height: number = 1;
-    // @ts-ignore
-    private controls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+
     private readonly container: HTMLElement;
     private resizeObserver = new ResizeObserver(() => {
         const width = this.container.clientWidth;
@@ -30,6 +30,22 @@ export default class Scene {
     private baseJoint: THREE.Mesh = new THREE.Mesh();
     private midJoint: THREE.Mesh = new THREE.Mesh();
     private wristJoint: THREE.Mesh = new THREE.Mesh();
+
+    private baseBone: THREE.Mesh = new THREE.Mesh();
+    private midBone: THREE.Mesh = new THREE.Mesh();
+    private endEffector: THREE.Mesh = new THREE.Mesh();
+
+    private target: THREE.Mesh = new THREE.Mesh();
+    // private pointer: THREE.Vector2 = new THREE.Vector2();
+    // private raycaster: THREE.Raycaster = new THREE.Raycaster();
+
+    // @ts-ignore
+    private orbitControls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+    private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
+
+    // debug
+    private arrowHelper1: THREE.ArrowHelper;
+    private arrowHelper2: THREE.ArrowHelper;
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -50,7 +66,8 @@ export default class Scene {
             renderer.setAnimationLoop(() => this.update());
         });
 
-        container.addEventListener("click", this.onMouseClick);
+        this.dragControls.addEventListener('dragstart', () => { this.orbitControls.enabled = false; });
+        this.dragControls.addEventListener('dragend', () => { this.orbitControls.enabled = true; });
     }
 
     // TODO think about encapsulation?
@@ -63,41 +80,70 @@ export default class Scene {
 
         const boneGeo = new THREE.BoxGeometry(SIDE, LEN, SIDE);
         const boneMat = new THREE.MeshStandardMaterial({ color: 0xfcba03 });
-        const baseBone = new THREE.Mesh(boneGeo, boneMat);
-        const midBone = new THREE.Mesh(boneGeo, boneMat);
+        this.baseBone = new THREE.Mesh(boneGeo, boneMat);
+        this.midBone = new THREE.Mesh(boneGeo, boneMat);
 
         const endEffectorGeo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
-        const endEffector = new THREE.Mesh(endEffectorGeo, boneMat);
+        this.endEffector = new THREE.Mesh(endEffectorGeo, boneMat);
 
         const jointGeo = new THREE.SphereGeometry(SIDE * 0.5);
         const jointMat = new THREE.MeshStandardMaterial({ color: 0x8132a8 });
 
-        const baseJoint = new THREE.Mesh(jointGeo, jointMat);
-        const midJoint = new THREE.Mesh(jointGeo, jointMat);
-        const wristJoint = new THREE.Mesh(jointGeo, jointMat);
+        this.baseJoint = new THREE.Mesh(jointGeo, jointMat);
+        this.midJoint = new THREE.Mesh(jointGeo, jointMat);
+        this.wristJoint = new THREE.Mesh(jointGeo, jointMat);
 
         // we are building the skeleton chain:
         // baseJoint -> baseBone -> midJoint -> midBone -> wristJoint -> endEffector
-        baseJoint.add(baseBone);
-        baseBone.add(midJoint);
-        midJoint.add(midBone);
-        midBone.add(wristJoint);
-        wristJoint.add(endEffector);
+        this.baseJoint.add(this.baseBone);
+        this.baseBone.add(this.midJoint);
+        this.midJoint.add(this.midBone);
+        this.midBone.add(this.wristJoint);
+        this.wristJoint.add(this.endEffector);
 
         // then place them at (0, 0.5, 0) in their parents local space
-        baseBone.position.set(0, LEN / 2, 0);
-        midJoint.position.set(0, LEN / 2, 0);
-        midBone.position.set(0, LEN / 2, 0);
-        wristJoint.position.set(0, LEN / 2, 0);
-        endEffector.position.set(0, SIDE / 2, 0);
+        this.baseBone.position.set(0, LEN / 2, 0);
+        this.midJoint.position.set(0, LEN / 2, 0);
+        this.midBone.position.set(0, LEN / 2, 0);
+        this.wristJoint.position.set(0, LEN / 2, 0);
+        this.endEffector.position.set(0, SIDE / 2, 0);
 
-        this.scene.add(baseJoint);
+        this.scene.add(this.baseJoint);
 
-        baseJoint.position.set(0., -1, 0);
+        this.baseJoint.position.set(0., -1, 0);
 
-        this.baseJoint = baseJoint;
-        this.midJoint = midJoint;
-        this.wristJoint = wristJoint;
+        // target
+        const targetGeo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
+        const targetMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        this.target = new THREE.Mesh(targetGeo, targetMat);
+
+        // TODO: set a different location.
+        this.target.position.set(-2., 1., 0.);
+
+        this.dragControls.objects.push(this.target);
+        this.scene.add(this.target);
+
+        // TODO: move this to ccd solver class
+        const endEffectorWorldPos = new THREE.Vector3();
+        this.endEffector.getWorldPosition(endEffectorWorldPos);
+        console.log("end effector local pos: " + JSON.stringify(this.endEffector.position));
+        console.log("end effector world pos: " + JSON.stringify(endEffectorWorldPos));
+        const wristJointWorldPos = new THREE.Vector3();
+        this.wristJoint.getWorldPosition(wristJointWorldPos);
+        console.log("wrist joint local pos: " + JSON.stringify(this.wristJoint.position));
+        console.log("wrist joint world pos: " + JSON.stringify(wristJointWorldPos));
+
+        const jointToEndEffector =
+            new THREE.Vector3().subVectors(endEffectorWorldPos, wristJointWorldPos);
+        const jointToTarget =
+            new THREE.Vector3().subVectors(this.target.position, wristJointWorldPos);
+
+        this.arrowHelper1 = new THREE.ArrowHelper(
+            jointToEndEffector.clone().normalize(), wristJointWorldPos, jointToEndEffector.length() < 1 ? 1: jointToEndEffector.length());
+        this.arrowHelper2 = new THREE.ArrowHelper(
+            jointToTarget.clone().normalize(), wristJointWorldPos, jointToTarget.length() < 1 ? 1 : jointToTarget.length());
+        this.scene.add(this.arrowHelper1);
+        this.scene.add(this.arrowHelper2);
     }
 
     private update() {
@@ -107,16 +153,58 @@ export default class Scene {
         }
         this.timer.update();
 
-        this.baseJoint.rotation.z += Math.cos(this.timer.getElapsed()) * 0.005;
-        this.midJoint.rotation.x += Math.cos(this.timer.getElapsed() * 0.1) * 0.001;
-        this.wristJoint.rotation.z += Math.cos(this.timer.getElapsed() * 1.2) * 0.005;
+        // this.baseJoint.rotation.z += Math.cos(this.timer.getElapsed()) * 0.005;
+        // this.midJoint.rotation.x += Math.cos(this.timer.getElapsed() * 0.1) * 0.001;
+        // this.wristJoint.rotation.z += Math.cos(this.timer.getElapsed() * 1.2) * 0.005;
+
+        // // TODO: move this to ccd solver class
+        // const jointToEndEffector =
+        //     new THREE.Vector3().subVectors(this.endEffector.position, this.wristJoint.position);
+        // const jointToTarget =
+        //     new THREE.Vector3().subVectors(this.target.position, this.wristJoint.position);
+        //
+        // const hexColor = 0xff0000; // Red
+        // const arrowHelper1 = new THREE.ArrowHelper(jointToEndEffector, this.wristJoint.position, jointToEndEffector.length(), hexColor);
+        // const arrowHelper2 = new THREE.ArrowHelper(jointToTarget, this.wristJoint.position, jointToTarget.length(), hexColor);
+        // this.scene.add(arrowHelper1);
+        // this.scene.add(arrowHelper2);
+
+        const endEffectorWorldPos = new THREE.Vector3();
+        this.endEffector.getWorldPosition(endEffectorWorldPos);
+        const wristJointWorldPos = new THREE.Vector3();
+        this.wristJoint.getWorldPosition(wristJointWorldPos);
+
+        const jointToEndEffector =
+            new THREE.Vector3().subVectors(endEffectorWorldPos, wristJointWorldPos);
+        const jointToTarget =
+            new THREE.Vector3().subVectors(this.target.position, wristJointWorldPos);
+
+        this.arrowHelper1.setLength(jointToEndEffector.length() < 1 ? 1 : jointToEndEffector.length());
+        this.arrowHelper1.setDirection(jointToEndEffector.clone().normalize());
+        this.arrowHelper2.setLength(jointToTarget.length() < 1 ? 1: jointToTarget.length());
+        this.arrowHelper2.setDirection(jointToTarget.clone().normalize());
 
         this.renderer.render(this.scene, this.camera);
     }
 
-    onMouseClick(e: Event) {
-        console.log("mouse clicked: " + e);
-    }
+    // onPointerDown(e: PointerEvent) {
+    //     // console.log("mouse clicked: " + e.clientY);
+    //     const bound = this.container.getBoundingClientRect();
+    //
+    //     this.pointer.x = ((e.clientX - bound.left) / bound.width) * 2 - 1;
+    //     this.pointer.y = -((e.clientY - bound.top) / bound.height) * 2 + 1;
+    //
+    //     console.log("x: " + this.pointer.x + ", y: " + this.pointer.y);
+    //
+    //     this.raycaster.setFromCamera(this.pointer, this.camera);
+    //     const intersects = this.raycaster.intersectObject(this.target);
+    //
+    //     if (intersects.length > 0) {
+    //         const hit = intersects[0].point;
+    //         console.log("hit! " + JSON.stringify(hit));
+    //         this.target.position.set(hit.x, hit.y, hit.z);
+    //     }
+    // }
 
     private createCamera() {
         const aspectRatio = this.width / this.height;
