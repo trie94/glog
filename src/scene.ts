@@ -44,8 +44,8 @@ export default class Scene {
     private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
 
     // debug
-    private arrowHelper1: THREE.ArrowHelper;
-    private arrowHelper2: THREE.ArrowHelper;
+    private arrowHelper1: THREE.ArrowHelper | undefined;
+    private arrowHelper2: THREE.ArrowHelper | undefined;
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
