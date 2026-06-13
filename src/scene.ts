@@ -175,15 +175,16 @@ export default class Scene {
                 // we need to apply the current world quat then the new delta rot.
                 this.jointWorldQuat.premultiply(deltaQuat);
 
+                let finalQuat = this.jointWorldQuat;
+
                 if (currJoint.parent) {
                     const parentWorldQuat = new THREE.Quaternion();
                     currJoint.parent.getWorldQuaternion(parentWorldQuat);
                     // local quat of the curr joint = inverse of parent world rotation * new world quat
-                    currJoint.quaternion.copy(parentWorldQuat.invert().multiply(this.jointWorldQuat));
-                } else {
-                    // no parent, just apply the world quaternion.
-                    currJoint.quaternion.copy(this.jointWorldQuat);
+                    finalQuat = parentWorldQuat.invert().multiply(this.jointWorldQuat);
+                    // currJoint.quaternion.copy(parentWorldQuat.invert().multiply(this.jointWorldQuat));
                 }
+                currJoint.quaternion.slerp(finalQuat, 0.1);
 
                 // update the rotation immediately before the next iteration.
                 currJoint.updateMatrixWorld(true);
