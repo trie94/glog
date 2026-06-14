@@ -206,6 +206,7 @@ there are many IK solvers, but here we will briefly introduce three popular iter
 implementations in separate posts:
 
 ### CCD (cyclic coordinate descent)
+[//]: # (<div id="visualizer-container-2" class="visualizer-container"></div>)
 for each joint, CCD draws:
 - a line from the joint to the end effector
 - a line from the joint to the target
@@ -223,6 +224,7 @@ it then rotates the joint to make these two lines align, and moves up the chain 
 the solver keeps repeating those two steps (in our case joint B, joint A, joint B, joint A...).
 
 ### FABRIK (forward and backward reaching inverse kinematics)
+[//]: # (<div id="visualizer-container-3" class="visualizer-container"></div>)
 this approach cares about one rule: the lengths of the segments between the joints never change. the way this works is
 to ping-pong between backward and forward reaches.
 

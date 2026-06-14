@@ -4,15 +4,18 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DragControls } from 'three/addons/controls/DragControls.js';
 
 // TODO: make this class either generic or specific
-export default class Scene {
-    private timer: THREE.Timer = new THREE.Timer();
-    private scene: THREE.Scene = new THREE.Scene();
-    private directionalLight: THREE.DirectionalLight =
-        new THREE.DirectionalLight( 0xfff9ea, 4 );
-    private camera: THREE.PerspectiveCamera = this.createCamera();
-    private renderer: WebGPURenderer = new WebGPURenderer({
+export default class Visualizer {
+    protected timer: THREE.Timer = new THREE.Timer();
+    protected scene: THREE.Scene = new THREE.Scene();
+
+    protected camera: THREE.PerspectiveCamera = this.createCamera();
+    protected renderer: WebGPURenderer = new WebGPURenderer({
         antialias: true,
     });
+
+    private directionalLight: THREE.DirectionalLight =
+        new THREE.DirectionalLight( 0xfff9ea, 4 );
+
     private width: number = 1;
     private height: number = 1;
 
@@ -27,26 +30,25 @@ export default class Scene {
         this.renderer.setSize(width, height);
     });
 
-    private baseJoint: THREE.Mesh = new THREE.Mesh();
-    private midJoint: THREE.Mesh = new THREE.Mesh();
-    private wristJoint: THREE.Mesh = new THREE.Mesh();
+    protected baseJoint: THREE.Mesh = new THREE.Mesh();
+    protected midJoint: THREE.Mesh = new THREE.Mesh();
+    protected wristJoint: THREE.Mesh = new THREE.Mesh();
 
-    private baseBone: THREE.Mesh = new THREE.Mesh();
-    private midBone: THREE.Mesh = new THREE.Mesh();
-    private endEffector: THREE.Mesh = new THREE.Mesh();
+    protected baseBone: THREE.Mesh = new THREE.Mesh();
+    protected midBone: THREE.Mesh = new THREE.Mesh();
+    protected endEffector: THREE.Mesh = new THREE.Mesh();
 
-    private target: THREE.Mesh = new THREE.Mesh();
+    protected target: THREE.Mesh = new THREE.Mesh();
 
     // @ts-ignore
     private orbitControls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
 
-    private readonly MAX_ITER: number = 10;
-    private joints: THREE.Mesh[] = [];
+    protected jointToEndEffector = new THREE.Vector3();
+    protected jointToTarget = new THREE.Vector3();
+    protected jointWorldQuat = new THREE.Quaternion();
 
-    private jointToEndEffector = new THREE.Vector3();
-    private jointToTarget = new THREE.Vector3();
-    private jointWorldQuat = new THREE.Quaternion();
+    protected joints: THREE.Mesh[] = [];
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -71,15 +73,12 @@ export default class Scene {
         this.dragControls.addEventListener('dragend', () => {
             this.orbitControls.enabled = true;
         });
+        this.directionalLight.position.set( 2, 5, 2 );
 
         // this.container.addEventListener('pointerdown', (e: PointerEvent) => { this.onPointerDown(e); });
     }
 
-    // TODO think about encapsulation?
-    start() {
-        console.log("start");
-        this.directionalLight.position.set( 2, 5, 2 );
-
+    setupArm() {
         const LEN = 1;
         const SIDE = 0.5;
 
@@ -139,59 +138,18 @@ export default class Scene {
         this.joints.push(this.baseJoint);
     }
 
-    private update() {
+    // TODO think about encapsulation?
+    start() {
+        console.log("start");
+        this.setupArm();
+    }
+
+    update() {
         if (!this.renderer.initialized) {
             console.log("web gpu renderer hasn't been initialized");
             return;
         }
         this.timer.update();
-        for (let i = 0; i < this.MAX_ITER; i++) {
-            const endEffectorWorldPos = new THREE.Vector3();
-            this.endEffector.getWorldPosition(endEffectorWorldPos);
-            // we are close enough!
-            if (endEffectorWorldPos.distanceToSquared(this.target.position) < 0.001) {
-                break;
-            }
-
-            for (let j = 0; j < this.joints.length; j++) {
-                const currJoint = this.joints[j];
-                this.endEffector.getWorldPosition(endEffectorWorldPos);
-                const jointWorldPos = new THREE.Vector3();
-                currJoint.getWorldPosition(jointWorldPos);
-
-                this.jointToEndEffector =
-                    new THREE.Vector3().subVectors(endEffectorWorldPos, jointWorldPos).normalize();
-                this.jointToTarget =
-                    new THREE.Vector3().subVectors(this.target.position, jointWorldPos).normalize();
-
-                const deltaQuat = new THREE.Quaternion().setFromUnitVectors(
-                    this.jointToEndEffector,
-                    this.jointToTarget
-                );
-
-                // get the current world quaternion of the current joint
-                currJoint.getWorldQuaternion(this.jointWorldQuat);
-                // the new world rotation = world quat * current world rot
-                // we need to apply the current world quat then the new delta rot.
-                this.jointWorldQuat.premultiply(deltaQuat);
-
-                let finalQuat = this.jointWorldQuat;
-
-                if (currJoint.parent) {
-                    const parentWorldQuat = new THREE.Quaternion();
-                    currJoint.parent.getWorldQuaternion(parentWorldQuat);
-                    // local quat of the curr joint = inverse of parent world rotation * new world quat
-                    finalQuat = parentWorldQuat.invert().multiply(this.jointWorldQuat);
-                    // currJoint.quaternion.copy(parentWorldQuat.invert().multiply(this.jointWorldQuat));
-                }
-                currJoint.quaternion.copy(finalQuat);
-
-                // update the rotation immediately before the next iteration.
-                currJoint.updateMatrixWorld(true);
-            }
-        }
-
-        this.renderer.render(this.scene, this.camera);
     }
     // onPointerDown(e: PointerEvent) {
     //     console.log("mouse clicked: " + e);
