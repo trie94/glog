@@ -149,7 +149,7 @@ export default class Scene {
             const endEffectorWorldPos = new THREE.Vector3();
             this.endEffector.getWorldPosition(endEffectorWorldPos);
             // we are close enough!
-            if (endEffectorWorldPos.distanceToSquared(this.target.position) < 0.3) {
+            if (endEffectorWorldPos.distanceToSquared(this.target.position) < 0.001) {
                 break;
             }
 
@@ -184,7 +184,7 @@ export default class Scene {
                     finalQuat = parentWorldQuat.invert().multiply(this.jointWorldQuat);
                     // currJoint.quaternion.copy(parentWorldQuat.invert().multiply(this.jointWorldQuat));
                 }
-                currJoint.quaternion.slerp(finalQuat, 0.1);
+                currJoint.quaternion.copy(finalQuat);
 
                 // update the rotation immediately before the next iteration.
                 currJoint.updateMatrixWorld(true);
