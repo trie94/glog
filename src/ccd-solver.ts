@@ -4,6 +4,14 @@ import * as THREE from "three";
 export default class CcdSolver extends Visualizer {
     private readonly MAX_ITER: number = 10;
 
+    private jointToEndEffector = new THREE.Vector3();
+    private jointToTarget = new THREE.Vector3();
+    private jointWorldQuat = new THREE.Quaternion();
+
+    start() {
+        super.setupArm(1, 0.5);
+    }
+
     update() {
         super.update();
         for (let i = 0; i < this.MAX_ITER; i++) {

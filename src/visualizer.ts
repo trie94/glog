@@ -3,7 +3,6 @@ import { WebGPURenderer } from "three/webgpu";
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DragControls } from 'three/addons/controls/DragControls.js';
 
-// TODO: make this class either generic or specific
 export default class Visualizer {
     protected timer: THREE.Timer = new THREE.Timer();
     protected scene: THREE.Scene = new THREE.Scene();
@@ -19,10 +18,14 @@ export default class Visualizer {
     private width: number = 1;
     private height: number = 1;
 
-    private readonly container: HTMLElement;
+    protected readonly container: HTMLElement;
     private resizeObserver = new ResizeObserver(() => {
         const width = this.container.clientWidth;
         const height = this.container.clientHeight;
+        // ignore invalid dimension
+        if (width == 0 || height == 0) {
+            return;
+        }
         console.log("container size changed. w: " + width + ", h: " + height);
 
         this.camera.aspect = width / height;
@@ -44,11 +47,8 @@ export default class Visualizer {
     private orbitControls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
 
-    protected jointToEndEffector = new THREE.Vector3();
-    protected jointToTarget = new THREE.Vector3();
-    protected jointWorldQuat = new THREE.Quaternion();
-
     protected joints: THREE.Mesh[] = [];
+    protected jointsReverse: THREE.Mesh[] = [];
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -78,22 +78,19 @@ export default class Visualizer {
         // this.container.addEventListener('pointerdown', (e: PointerEvent) => { this.onPointerDown(e); });
     }
 
-    setupArm() {
-        const LEN = 1;
-        const SIDE = 0.5;
-
-        const boneGeo = new THREE.BoxGeometry(SIDE, LEN, SIDE);
+    protected setupArm(len: number, side: number) {
+        const boneGeo = new THREE.BoxGeometry(side, len, side);
         const boneMat = new THREE.MeshStandardMaterial({ color: 0xfcba03 });
         this.baseBone = new THREE.Mesh(boneGeo, boneMat);
         this.baseBone.name = "base bone";
         this.midBone = new THREE.Mesh(boneGeo, boneMat);
         this.midBone.name = "mid bone";
 
-        const endEffectorGeo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
+        const endEffectorGeo = new THREE.BoxGeometry(side, side, side);
         this.endEffector = new THREE.Mesh(endEffectorGeo, boneMat);
         this.endEffector.name = "end effector";
 
-        const jointGeo = new THREE.SphereGeometry(SIDE * 0.5);
+        const jointGeo = new THREE.SphereGeometry(side * 0.5);
         const jointMat = new THREE.MeshStandardMaterial({ color: 0x8132a8 });
 
         this.baseJoint = new THREE.Mesh(jointGeo, jointMat);
@@ -112,18 +109,18 @@ export default class Visualizer {
         this.wristJoint.add(this.endEffector);
 
         // then place them at (0, 0.5, 0) in their parents local space
-        this.baseBone.position.set(0, LEN / 2, 0);
-        this.midJoint.position.set(0, LEN / 2, 0);
-        this.midBone.position.set(0, LEN / 2, 0);
-        this.wristJoint.position.set(0, LEN / 2, 0);
-        this.endEffector.position.set(0, SIDE / 2, 0);
+        this.baseBone.position.set(0, len / 2, 0);
+        this.midJoint.position.set(0, len / 2, 0);
+        this.midBone.position.set(0, len / 2, 0);
+        this.wristJoint.position.set(0, len / 2, 0);
+        this.endEffector.position.set(0, side / 2, 0);
 
         this.scene.add(this.baseJoint);
 
         this.baseJoint.position.set(0., -1, 0);
 
         // target
-        const targetGeo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
+        const targetGeo = new THREE.BoxGeometry(side, side, side);
         const targetMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         this.target = new THREE.Mesh(targetGeo, targetMat);
 
@@ -136,13 +133,13 @@ export default class Visualizer {
         this.joints.push(this.wristJoint);
         this.joints.push(this.midJoint);
         this.joints.push(this.baseJoint);
+
+        this.jointsReverse.push(this.baseJoint);
+        this.jointsReverse.push(this.midJoint);
+        this.jointsReverse.push(this.wristJoint);
     }
 
-    // TODO think about encapsulation?
-    start() {
-        console.log("start");
-        this.setupArm();
-    }
+    start() {}
 
     update() {
         if (!this.renderer.initialized) {
@@ -151,6 +148,7 @@ export default class Visualizer {
         }
         this.timer.update();
     }
+
     // onPointerDown(e: PointerEvent) {
     //     console.log("mouse clicked: " + e);
     // }
