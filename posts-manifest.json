@@ -2,7 +2,7 @@
   "posts": [
     { "id": "robot-arm-target", "visible": true },
     { "id": "ccd-solver", "visible": true },
-    { "id": "fabrik-solver", "visible": false },
+    { "id": "fabrik-solver", "visible": true },
     { "id": "jacobian-solver", "visible": false },
     { "id": "matrix", "visible": false },
     { "id": "test", "visible": false }

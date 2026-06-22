@@ -47,9 +47,6 @@ export default class Visualizer {
     private orbitControls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
 
-    protected joints: THREE.Mesh[] = [];
-    protected jointsReverse: THREE.Mesh[] = [];
-
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
         this.height = container.clientHeight;
@@ -123,20 +120,13 @@ export default class Visualizer {
         const targetGeo = new THREE.BoxGeometry(side, side, side);
         const targetMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         this.target = new THREE.Mesh(targetGeo, targetMat);
+        this.target.name = "target";
 
         // TODO: set a different location.
-        this.target.position.set(-2.5, 1., 0.);
+        this.target.position.set(-1, 1., 0.);
 
         this.dragControls.objects.push(this.target);
         this.scene.add(this.target);
-
-        this.joints.push(this.wristJoint);
-        this.joints.push(this.midJoint);
-        this.joints.push(this.baseJoint);
-
-        this.jointsReverse.push(this.baseJoint);
-        this.jointsReverse.push(this.midJoint);
-        this.jointsReverse.push(this.wristJoint);
     }
 
     start() {}

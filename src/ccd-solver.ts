@@ -8,8 +8,14 @@ export default class CcdSolver extends Visualizer {
     private jointToTarget = new THREE.Vector3();
     private jointWorldQuat = new THREE.Quaternion();
 
+    private joints: THREE.Mesh[] = [];
+
     start() {
         super.setupArm(1, 0.5);
+
+        this.joints.push(this.wristJoint);
+        this.joints.push(this.midJoint);
+        this.joints.push(this.baseJoint);
     }
 
     update() {
