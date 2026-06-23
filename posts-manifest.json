@@ -4,6 +4,7 @@
     { "id": "ccd-solver", "visible": true },
     { "id": "fabrik-solver", "visible": true },
     { "id": "jacobian-solver", "visible": false },
+    { "id": "quadruped-robot", "visible": true },
     { "id": "matrix", "visible": false },
     { "id": "test", "visible": false }
   ]
