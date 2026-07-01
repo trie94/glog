@@ -1,6 +1,14 @@
 import * as THREE from "three";
 import {Limb, LimbType} from "./limb.ts";
 
+interface LimbState {
+    currPos: THREE.Vector3;
+    startPos: THREE.Vector3;
+    targetPos: THREE.Vector3;
+    progress: number;
+    isStepping: boolean;
+}
+
 export class RobotController {
     LEN = 1;
     SIDE  = 0.5;
@@ -17,7 +25,8 @@ export class RobotController {
 
     private body: THREE.Mesh = new THREE.Mesh();
     private limbs: Limb[] = [];
-    private limbTargets: THREE.Vector3[] = [];
+    // private limbTargets: THREE.Vector3[] = [];
+    private limbStates: LimbState[] = [];
 
     constructor() {
         const bodyGeo = new THREE.BoxGeometry(
@@ -47,10 +56,27 @@ export class RobotController {
         for (let i = 0; i < this.limbs.length; i++) {
             const worldPos = new THREE.Vector3();
             this.limbs[i].endEffectorTip.getWorldPosition(worldPos);
-            this.limbTargets.push(worldPos);
+            this.limbStates.push({
+                currPos: worldPos.clone(),
+                startPos: worldPos.clone(),
+                targetPos: worldPos.clone(),
+                progress: 1.,
+                isStepping: false
+            });
         }
 
         return this.body;
+    }
+
+    private isPairMoving(limb: Limb): boolean{
+        switch (limb.limbType) {
+            case LimbType.FRONT_LEFT:
+            case LimbType.BACK_RIGHT:
+                return this.limbStates[1].isStepping || this.limbStates[2].isStepping;
+            case LimbType.BACK_LEFT:
+            case LimbType.FRONT_RIGHT:
+                return this.limbStates[0].isStepping || this.limbStates[3].isStepping;
+        }
     }
 
     // TODO: movement should be controlled by some other input
@@ -61,7 +87,8 @@ export class RobotController {
         // update the limb targets..
         for (let i=0; i<this.limbs.length; i++) {
             const limb = this.limbs[i];
-            const currentTarget = this.limbTargets[i];
+            const state = this.limbStates[i];
+            const currentTarget = state.targetPos;
 
             // TODO: move this to limb
             const limbBaseJointWorldPos = new THREE.Vector3();
@@ -71,7 +98,11 @@ export class RobotController {
             const distZ = limbBaseJointWorldPos.z - currentTarget.z;
             const horizontalDist = distX * distX + distZ * distZ;
 
-            if (horizontalDist > this.STEP_THRESHOLD) {
+            if (!this.isPairMoving(limb) && horizontalDist > this.STEP_THRESHOLD) {
+                state.isStepping = true;
+                state.progress = 0.;
+                state.startPos.copy(state.currPos);
+
                 const newTargetX = limbBaseJointWorldPos.x + (this.velocity.x * this.STEP_MULTIPLIER);
                 const newTargetZ = limbBaseJointWorldPos.z + (this.velocity.z * this.STEP_MULTIPLIER);
                 const newTargetY = currentTarget.y; // for now we assume the floor is flat
@@ -81,7 +112,21 @@ export class RobotController {
         }
 
         for (let i=0; i<this.limbs.length; i++) {
-            this.limbs[i].update(this.limbTargets[i]);
+            const state = this.limbStates[i];
+            if (state.isStepping) {
+                state.progress += timer.getDelta() * 1.3;
+                if (state.progress >= 1.) {
+                    state.isStepping = false;
+                }
+                state.currPos.lerpVectors(state.startPos, state.targetPos, state.progress);
+
+                // some up down stuff
+                const STEP_HEIGHT = 0.2;
+                state.currPos.y = state.targetPos.y + (Math.sin(state.progress * Math.PI) * STEP_HEIGHT);
+            } else {
+                state.currPos.copy(state.targetPos);
+            }
+            this.limbs[i].update(state.currPos);
         }
     }
 }

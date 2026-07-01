@@ -43,7 +43,7 @@ export class Limb {
     // fabrik is purely position based.
     private points: THREE.Mesh[] = [];
 
-    private limbType: LimbType = LimbType.FRONT_LEFT;
+    public limbType: LimbType = LimbType.FRONT_LEFT;
 
     public baseJoint: THREE.Mesh = new THREE.Mesh();
     private midJoint: THREE.Mesh = new THREE.Mesh();
