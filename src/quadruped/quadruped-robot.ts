@@ -78,6 +78,7 @@ export default class QuadrupedRobot {
             return;
         }
         this.timer.update();
+        this.robotController.update(this.timer);
         this.renderer.render(this.scene, this.camera);
     }
 

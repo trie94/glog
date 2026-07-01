@@ -24,9 +24,6 @@ export class Limb {
         this.midBone = midBone;
         this.endEffector = endEffector;
 
-        // this is for keeping the base joint original position
-        this.baseJointOriginalPos = this.baseJoint.position.clone();
-
         // this is for computing the end effector joint
         this.endEffectorTip.geometry = new THREE.SphereGeometry(side * 0.5);
         this.endEffectorTip.name = "end effector tip";
@@ -48,7 +45,7 @@ export class Limb {
 
     private limbType: LimbType = LimbType.FRONT_LEFT;
 
-    private baseJoint: THREE.Mesh = new THREE.Mesh();
+    public baseJoint: THREE.Mesh = new THREE.Mesh();
     private midJoint: THREE.Mesh = new THREE.Mesh();
     private wristJoint: THREE.Mesh = new THREE.Mesh();
 
@@ -56,7 +53,6 @@ export class Limb {
     private midBone: THREE.Mesh = new THREE.Mesh();
     private endEffector: THREE.Mesh = new THREE.Mesh();
 
-    private baseJointOriginalPos = new THREE.Vector3();
     public endEffectorTip = new THREE.Mesh();
 
     static create(body: THREE.Mesh, limbType: LimbType,
@@ -128,9 +124,12 @@ export class Limb {
             baseBone, midBone, endEffector);
     }
 
-    // TODO: this was copied from the fabrik implementation. fix it later.
     update(target: THREE.Vector3) {
-        // 0. convert all the points in world space
+        // get the current base joint pos from FK.
+        const currentBaseJointWorldPos = new THREE.Vector3();
+        this.baseJoint.getWorldPosition(currentBaseJointWorldPos);
+
+        // convert all the points in world space
         const currentWorldPositions: THREE.Vector3[] = [];
         this.points.forEach(p => {
             const pInWorld = new THREE.Vector3();
@@ -161,7 +160,7 @@ export class Limb {
         let finalWorldPositions: THREE.Vector3[] = new Array(targetWorldPositions.length);
         for (let i = targetWorldPositions.length - 1; i >= 0; i--) {
             if (i == targetWorldPositions.length - 1) { // base
-                finalWorldPositions[i] = this.baseJointOriginalPos.clone();
+                finalWorldPositions[i] = currentBaseJointWorldPos.clone();
             } else {
                 const currOldTargetPos = targetWorldPositions[i];
                 const prevNewTargetPos = finalWorldPositions[i + 1];
