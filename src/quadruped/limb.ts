@@ -1,11 +1,13 @@
 import * as THREE from "three";
 
-export enum LimbType {
-    FRONT_LEFT,
-    FRONT_RIGHT,
-    BACK_LEFT,
-    BACK_RIGHT
-}
+export const LimbType = {
+    FRONT_LEFT: "FRONT_LEFT",
+    FRONT_RIGHT: "FRONT_RIGHT",
+    BACK_LEFT: "BACK_LEFT",
+    BACK_RIGHT: "BACK_RIGHT"
+} as const;
+
+export type LimbType = typeof LimbType[keyof typeof LimbType];
 
 export class Limb {
     constructor(
@@ -49,7 +51,9 @@ export class Limb {
     private midJoint: THREE.Mesh = new THREE.Mesh();
     private wristJoint: THREE.Mesh = new THREE.Mesh();
 
+    // @ts-ignore
     private baseBone: THREE.Mesh = new THREE.Mesh();
+    // @ts-ignore
     private midBone: THREE.Mesh = new THREE.Mesh();
     private endEffector: THREE.Mesh = new THREE.Mesh();
 

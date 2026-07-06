@@ -9,7 +9,10 @@ export default class QuadrupedRobot {
     private timer: THREE.Timer = new THREE.Timer();
     private scene: THREE.Scene = new THREE.Scene();
 
+    private robotController: RobotController = new RobotController();
+
     private camera: THREE.PerspectiveCamera = this.createCamera();
+    // private cameraOffset: THREE.Vector3 = new THREE.Vector3(6, 1.4, 5);
     private renderer: WebGPURenderer = new WebGPURenderer({
         antialias: true,
     });
@@ -38,8 +41,6 @@ export default class QuadrupedRobot {
     // @ts-ignore
     private orbitControls: OrbitControls = new OrbitControls(this.camera, this.renderer.domElement);
     private dragControls: DragControls = new DragControls([], this.camera, this.renderer.domElement);
-
-    private robotController: RobotController = new RobotController();
 
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
@@ -79,6 +80,16 @@ export default class QuadrupedRobot {
         }
         this.timer.update();
         this.robotController.update(this.timer);
+        // const targetPos = this.robotController.getCoM();
+        // this.camera.position.copy(targetPos).add(this.cameraOffset);
+        // this.orbitControls.target.copy(targetPos);
+        // this.orbitControls.update();
+
+        const deltaPos =
+            this.robotController.velocity.clone().multiplyScalar(this.timer.getDelta());
+        this.orbitControls.target.add(deltaPos);
+        this.camera.position.add(deltaPos);
+
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -89,8 +100,7 @@ export default class QuadrupedRobot {
         const farPlane = 10000;
         const camera = new THREE.PerspectiveCamera(fieldOfView, aspectRatio, nearPlane, farPlane);
 
-        camera.position.set(0, 0, 3);
-        camera.lookAt(new THREE.Vector3(0., 0., 0.));
+        camera.position.set(6, 1.4, 5);
 
         return camera;
     }

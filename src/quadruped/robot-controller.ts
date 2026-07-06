@@ -21,7 +21,7 @@ export class RobotController {
     private bodyHeight = 0.5;
     private bodyDepth = 3;
 
-    private velocity = new THREE.Vector3(0, 0, 0.5);
+    public velocity = new THREE.Vector3(0, 0, 0.5);
 
     private body: THREE.Mesh = new THREE.Mesh();
     private limbs: Limb[] = [];
@@ -128,5 +128,10 @@ export class RobotController {
             }
             this.limbs[i].update(state.currPos);
         }
+    }
+
+    // TODO fix this
+    getCoM() {
+        return this.body.position;
     }
 }
